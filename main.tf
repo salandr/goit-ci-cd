@@ -28,10 +28,36 @@ module "ecr" {
 
 module "eks" {
   source          = "./modules/eks"          
-  cluster_name    = "eks-cluster-hw7"            # Назва кластера
+  cluster_name    = "eks-cluster-hw8-9"            # Назва кластера
   subnet_ids      = module.vpc.public_subnets     # ID підмереж
   instance_type   = "t2.medium"                    # Тип інстансів
   desired_size    = 1                             # Бажана кількість нодів
   max_size        = 2                             # Максимальна кількість нодів
   min_size        = 1                             # Мінімальна кількість нодів
+}
+
+
+data "aws_eks_cluster" "eks" {
+  name = var.cluster_name
+}
+
+data "aws_eks_cluster_auth" "eks" {
+  name = var.cluster_name
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.eks.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.eks.token
+  }
+}
+
+module "jenkins" {
+  source       = "./modules/jenkins"
+  cluster_name = module.eks.eks_cluster_name
+
+  providers = {
+    helm = helm
+  }
 }

@@ -1,0 +1,53 @@
+controller:
+  admin:
+    username: admin
+    password: admin123
+
+  serviceType: LoadBalancer
+  servicePort: 80
+  service:
+    port: 80
+    targetPort: 8080
+
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+
+  persistentVolume:
+    enabled: true
+    storageClass: ""
+    size: 10Gi
+
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - credentials-binding:latest
+    - github:latest
+    - docker-workflow:latest
+    - aws-credentials:latest
+    - workflow-job:latest
+
+  agent:
+    enabled: true
+    customJenkinsLabels: kaniko
+    alwaysPullImage: true
+    image: gcr.io/kaniko-project/executor:latest
+    command: ""
+    args:
+      - "--dockerfile=/workspace/Dockerfile"
+      - "--context=dir:///workspace/"
+      - "--destination=$(DESTINATION_IMAGE)"
+      - "--insecure"
+      - "--skip-tls-verify"
+    volumes:
+      - name: docker-config
+        emptyDir: {}
+    volumeMounts:
+      - name: docker-config
+        mountPath: /kaniko/.docker
