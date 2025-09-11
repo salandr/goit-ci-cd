@@ -9,6 +9,11 @@ controller:
     port: 80
     targetPort: 8080
 
+  serviceAccount:
+     name: jenkins-sa
+     create: false
+
+
   resources:
     limits:
       cpu: "500m"
@@ -19,7 +24,7 @@ controller:
 
   persistentVolume:
     enabled: true
-    storageClass: ""
+    storageClass: "ebs-sc"
     size: 10Gi
 
   installPlugins:
@@ -29,25 +34,56 @@ controller:
     - configuration-as-code:latest
     - credentials-binding:latest
     - github:latest
+    - docker-plugin:latest
     - docker-workflow:latest
-    - aws-credentials:latest
-    - workflow-job:latest
+    - job-dsl:latest
 
-  agent:
-    enabled: true
-    customJenkinsLabels: kaniko
-    alwaysPullImage: true
-    image: gcr.io/kaniko-project/executor:latest
-    command: ""
-    args:
-      - "--dockerfile=/workspace/Dockerfile"
-      - "--context=dir:///workspace/"
-      - "--destination=$(DESTINATION_IMAGE)"
-      - "--insecure"
-      - "--skip-tls-verify"
-    volumes:
-      - name: docker-config
-        emptyDir: {}
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
+  JCasC:
+    configScripts:
+      credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: github-token
+                      username: 
+                      password: 
+                      description: GitHub PAT
+      seed-job: |
+        jobs:
+          - script: >
+              job('seed-job') {
+                description('Job to generate pipeline for Django project')
+                scm {
+                  git {
+                    remote {
+                      url('https://github.com/chertoha/sample.git')
+                      credentials('github-token')
+                    }
+                    branches('*/main')
+                  }
+                }
+                steps {
+                  dsl {
+                    text('''
+                      pipelineJob("goit-django-docker") {
+                        definition {
+                          cpsScm {
+                            scm {
+                              git {
+                                remote {
+                                  url("https://github.com/chertoha/sample.git")
+                                  credentials("github-token")
+                                }
+                                branches("*/main")
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ''')
+                  }
+                }
+              }

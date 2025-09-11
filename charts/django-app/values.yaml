@@ -1,26 +1,19 @@
+
 image:
-  repository: 824385115935.dkr.ecr.eu-west-1.amazonaws.com/lesson-7-ecr
-  tag: latest
-  # pullPolicy: IfNotPresent
-  pullPolicy: Always
-  digest: "{{ now | unixEpoch }}"
+  repository: 804054839611.dkr.ecr.eu-central-1.amazonaws.com/django
+  tag: v1.0.5
+  pullPolicy: IfNotPresent
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
-  targetPort: 8000
 
-autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 6
-  targetCPUUtilizationPercentage: 70
+ingress:
+  enabled: false
 
-env:
-  DJANGO_DEBUG: "False"
-  DATABASE_URL: "postgres://django:secretpass@postgres-db-postgresql.default.svc.cluster.local:5432/django_db"
-  DB_HOST: "postgres-db-postgresql.default.svc.cluster.local"
-  DB_PORT: "5432"
-  DB_NAME: "django_db"
-  DB_USER: "django"               
-  DB_PASSWORD: "secretpass" 
+config:
+  POSTGRES_PORT: 5432
+  POSTGRES_HOST: db
+  POSTGRES_USER: django_user
+  POSTGRES_DB: django_db
+  POSTGRES_PASSWORD: root

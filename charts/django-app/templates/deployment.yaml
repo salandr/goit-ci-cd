@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: django-app
+  name: {{ .Release.Name }}
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: django-app
+      app: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: django-app
+        app: {{ .Release.Name }}
     spec:
       containers:
         - name: django
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8000
+            - containerPort: {{ .Values.service.port }}
           envFrom:
             - configMapRef:
-                name: django-config
+                name: {{ .Release.Name }}
