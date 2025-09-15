@@ -59,7 +59,7 @@ controller:
                 scm {
                   git {
                     remote {
-                      url('https://github.com/chertoha/sample.git')
+                      url('https://github.com/AndriyDmitriv/infra.git')
                       credentials('github-token')
                     }
                     branches('*/main')
@@ -74,7 +74,7 @@ controller:
                             scm {
                               git {
                                 remote {
-                                  url("https://github.com/chertoha/sample.git")
+                                  url("https://github.com/AndriyDmitriv/infra.git")
                                   credentials("github-token")
                                 }
                                 branches("*/main")

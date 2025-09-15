@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/chertoha/sample
+    repoURL: https://github.com/chertoha/fp
     targetRevision: HEAD
     path: charts/django-app
     helm:

@@ -55,31 +55,80 @@ module "eks" {
   min_size        = 1                             # Мінімальна кількість нодів
 }
 
+locals {
+  eks_cluster_name = module.eks.eks_cluster_name
+}
+
+data "aws_eks_cluster" "eks" {
+  name       = local.eks_cluster_name
+  depends_on = [module.eks]
+}
+
+data "aws_eks_cluster_auth" "eks" {
+  name       = local.eks_cluster_name
+  depends_on = [module.eks]
+}
+
+
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.eks.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.eks.token
+}
+
+
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.eks.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.eks.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.eks.token
+  }
+}
+
+
+module "jenkins" {
+  source       = "./modules/jenkins"
+  cluster_name = module.eks.eks_cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  depends_on        = [module.eks]
+  providers    = {
+    helm       = helm
+    kubernetes = kubernetes
+  }
+}
+
+
+module "argo_cd" {
+  source       = "./modules/argo_cd"
+  namespace    = "argocd"
+  chart_version = "5.46.4"
+}
+
+
+
 
 module "rds" {
   source = "./modules/rds"
 
   name                       = "myapp-db"
-  use_aurora                 = true
+  use_aurora                 = false
   aurora_instance_count      = 2
 
-  # --- Aurora-only ---
   engine_cluster             = "aurora-postgresql"
   engine_version_cluster     = "15.3"
   parameter_group_family_aurora = "aurora-postgresql15"
   
 
-  # --- RDS-only ---
   engine                     = "postgres"
   engine_version             = "17.2"
   parameter_group_family_rds = "postgres17"
 
-  # Common
   instance_class             = "db.t3.medium"
   allocated_storage          = 20
   db_name                    = "myapp"
   username                   = "postgres"
-  password                   = "root"
+  password                   = "admin123AWS23"
   subnet_private_ids         = module.vpc.private_subnets
   subnet_public_ids          = module.vpc.public_subnets
   publicly_accessible        = true

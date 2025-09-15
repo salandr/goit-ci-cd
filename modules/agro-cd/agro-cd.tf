@@ -23,4 +23,3 @@ resource "helm_release" "argo_apps" {
   ]
   depends_on = [helm_release.argo_cd]
 }
-

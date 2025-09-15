@@ -1,4 +1,3 @@
-
 resource "aws_iam_role" "nodes" {
   name = "${var.cluster_name}-eks-nodes"
 

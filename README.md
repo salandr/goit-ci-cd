@@ -1,70 +1,96 @@
-## Створення DB Subnet Group, Security Group, Parameter Group
+# Інфраструктурне Розгортання Застосунку
 
-Так як DB Subnet Group, Security Group однакові що для звичайної rds, що для аврори, то вони створюються у `shared.tf`. Parameter Group створюється окремо для кожного типу бд у `rds.tf` та `aurora.tf`.
+## Мета
 
-## Приклад використання модуля (module "rds" { ... });
+У цьому завданні потрібно:
 
+1. Перевірити готовність компонентів інфраструктури.
+2. Зібрати та перевірити Terraform-модулі.
+3. Провести розгортання за допомогою `terraform apply`.
+4. Перевірити доступність сервісів через порт-форвардинг.
+5. Продемонструвати CI/CD за допомогою Jenkins та Argo CD.
+6. Налаштувати моніторинг з використанням Grafana та Prometheus.
+
+---
+
+## Підготовка
+
+Більшість компонентів вже були створені в попередніх завданнях, включаючи `main.tf`. Для зручності та дотримання принципів розділення обов’язків, застосунок винесено в окремий репозиторій:
+
+---
+
+## Кроки розгортання
+
+### 1. Ініціалізація S3 backend
+
+- Закоментуйте `backend.tf` і зайві модулі в `main.tf`.
+- Запустіть:
+
+```bash
+terraform init
+terraform apply
 ```
-module "rds" {
-  source = "./modules/rds"
-  ...
-  name                       = "myapp-db"
-  use_aurora                 = true
-  aurora_instance_count      = 2
-  ...
-}
+
+### 2. Основне розгортання
+
+- Розкоментуйте всі модулі.
+- Запустіть повторну ініціалізацію:
+
+```bash
+terraform init -reconfigure
+terraform apply
 ```
 
-## Опис усіх змінних із поясненням
+### 3. Налаштування `kubectl`
 
-### Основні параметри для створення БД
+```bash
+aws eks --region eu-central-1 update-kubeconfig --name eks-cluster-demo
+```
 
-    name — назва інстансу (або кластера, якщо Aurora);
+---
 
-    engine — тип БД: postgres, mysql, aurora, aurora-mysql, aurora-postgresql;
+## CI/CD
 
-    engine_version — версія БД;
+- У Jenkins запустіть `seed-job`.
+- Після цього застосунок завантажиться в ECR.
+- Argo CD підхопить зміни та задеплоїть їх в кластер.
 
-    instance_class — клас EC2-подібного інстансу (наприклад, db.t3.micro);
+---
 
-    allocated_storage — обсяг у ГБ, якщо це звичайна RDS.
+## Моніторинг
 
-    engine_cluster — тип бази даних, яку буде запускати Aurora. У нашому випадку це aurora-postgresql, тобто Aurora із сумісністю з PostgreSQL. Можна також використати aurora-mysql, якщо потрібно створити кластер на базі MySQL.
+### Встановлення Prometheus:
 
-    engine_version_cluster — конкретна версія бази даних, яку запускатиме Aurora-кластер. Наприклад, "15.3" означає, що буде розгорнута Aurora PostgreSQL, сумісна з PostgreSQL 15.3. Важливо використовувати лише ті версії, які офіційно підтримуються Aurora (вони відстають від оригінальних релізів PostgreSQL).
+```bash
+helm install prometheus prometheus-community/prometheus --namespace monitoring
+```
 
-    parameter_group_family_aurora — «родина» параметрів для Aurora. Вона має точно відповідати вибраній версії engine. Наприклад, для aurora-postgresql із версією 15.3 потрібно вказати aurora-postgresql15. Це визначає набір доступних параметрів, які можна налаштувати в parameter group.
+Перегляд Prometheus:
 
-### Безпека та мережа
+```bash
+export POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/name=prometheus,app.kubernetes.io/instance=prometheus" -o jsonpath="{.items[0].metadata.name}")
+kubectl --namespace monitoring port-forward $POD_NAME 9090
+```
 
-    subnet_public_ids — список публічних сабнетів (через модуль vpc);
+### Встановлення Grafana:
 
-    vpc_id — вибір мережі (через модуль vpc);
+```bash
+helm install grafana grafana/grafana --namespace monitoring --create-namespace --set adminPassword=admin123
+```
 
-    publicly_accessible — false означає, що БД доступна лише з приватної мережі;
+Перегляд Grafana:
 
-    multi_az — створення резервної репліки в іншій AZ для відмовостійкості.
+```bash
+export POD_NAME=$(kubectl get pods --namespace monitoring -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}")
+kubectl --namespace monitoring port-forward $POD_NAME 3000
+```
 
-### Parameter Group
+---
 
-    parameter_group_family — група параметрів, що сумісна з engine / version;
+## Доступ до сервісів (порт-форвардинг)
 
-    parameters — словник довільних параметрів, які підуть у parameter_group.
-
-### Архітектурні опції
-
-    use_aurora — якщо true, створюється кластер Aurora (не RDS instance).
-
-## Опис того, як змінити тип БД, engine, клас інстансу тощо
-
-use_aurora - змінити тип БД (true - аврора, false - звичайна rds)
-
-instance_class — клас EC2-подібного інстансу (наприклад, db.t3.micro);
-
-Для звичайної rds:
-
-engine та engine_version - postgres, mysql, aurora, aurora-mysql, aurora-postgresql;
-
-Для аврори:
-
-engine_cluster та engine_version_cluster — тип бази даних, яку буде запускати Aurora. У нашому випадку це aurora-postgresql, тобто Aurora із сумісністю з PostgreSQL. Можна також використати aurora-mysql, якщо потрібно створити кластер на базі MySQL. Плюс версія.
+```bash
+kubectl port-forward svc/jenkins 8080:8080 -n jenkins
+kubectl port-forward svc/argocd-server 8081:443 -n argocd
+kubectl port-forward svc/grafana 3000:80 -n monitoring
+```

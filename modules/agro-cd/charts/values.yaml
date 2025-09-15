@@ -3,7 +3,7 @@ applications:
     namespace: default
     project: default
     source:
-      repoURL:  https://github.com/chertoha/sample.git
+      repoURL: https://github.com/chertoha/fp.git
       path: django-chart
       targetRevision: main
       helm:
@@ -19,8 +19,8 @@ applications:
 
 repositories:
   - name: example-app
-    url: https://github.com/chertoha/sample.git
-    username: illarionovam
+    url: https://github.com/chertoha/fp.git
+    username: chertoha
     password:
 
 repoConfig:
